@@ -20,6 +20,8 @@ from sqlalchemy.sql import text
 from sqlalchemy import create_engine, Table, MetaData
 
 logger = logging.getLogger(__name__)
+playwright_p = None
+browser = None
 
 
 class Connector:
@@ -333,21 +335,23 @@ class ConnectorSql(Connector):
 
 class ConnectorRest(Connector):
     def __init__(self, **kwargs):
+        global browser
+        global playwright_p
         super().__init__()
         self.playwright = kwargs.get('playwright', False)
         self.json = kwargs.get('json', True)
         self.csv = kwargs.get('csv', False)
         self.page = None
+        if self.playwright and browser is None:
+            playwright_p = sync_playwright().start()
+            browser = playwright_p.firefox.launch()
 
     def read_all(
             self,
             url, *args, **kwargs) -> Any:
         if self.playwright:
-            with sync_playwright() as p:
-                browser_type = p.firefox
-                browser = browser_type.launch()
-                self.page = browser.new_page()
-                response = self.page.goto(
+            with  browser.new_page() as page:
+                response = page.goto(
                     url
                 )
                 return self.process_response(response)
