@@ -20,9 +20,6 @@ from sqlalchemy.sql import text
 from sqlalchemy import create_engine, Table, MetaData
 
 logger = logging.getLogger(__name__)
-playwright_p = None
-browser = None
-
 
 class Connector:
     """
@@ -333,29 +330,41 @@ class ConnectorSql(Connector):
         metadata.create_all(self.engine, **params)
 
 
+def playw_browser():
+    if playw_browser.count >= 1000 :
+        playw_browser.count = 0
+        playw_browser.browser.close()
+        playw_browser.playwright.stop()
+        playw_browser.playwright = None
+        playw_browser.browser = None
+    if playw_browser.playwright is None:
+        playw_browser.playwright = sync_playwright().start()
+        playw_browser.browser = playw_browser.playwright.firefox.launch()
+        playw_browser.count += 1
+    return playw_browser.browser
+
+playw_browser.playwright = None
+playw_browser.browser = None
+playw_browser.count = 0
+
 class ConnectorRest(Connector):
     def __init__(self, **kwargs):
-        global browser
-        global playwright_p
         super().__init__()
         self.playwright = kwargs.get('playwright', False)
         self.json = kwargs.get('json', True)
         self.csv = kwargs.get('csv', False)
         self.page = None
-        if self.playwright and browser is None:
-            playwright_p = sync_playwright().start()
-            browser = playwright_p.firefox.launch()
 
     def read_all(
             self,
             url, *args, **kwargs) -> Any:
         if self.playwright:
-            with  browser.new_page() as page:
+            with  playw_browser().new_context() as context:
+                page = context.new_page()
                 response = page.goto(
                     url
                 )
                 return self.process_response(response)
-
         response = requests.get(os.path.join(url))
         return self.process_response(response)
 
