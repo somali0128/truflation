@@ -114,6 +114,9 @@ class Pipeline:
             push_general_logs()
         return None
 
+    def clear(self):
+        self.loader.clear()
+
     @staticmethod
     def header(s: str):
         print('\n' + '#'*20 + f'   {s}   ' + '#'*(40 - len(s)))
